@@ -96,6 +96,85 @@ void computeY( const size_t L , const double * const P ,
 	}
 }
 
+void computeP_real( const size_t L ,
+const double * const A , const double * const B ,
+double * const P , const double x ) {
+const double sintheta = sqrt (1.0 - x*x) ;
+double temp = 0.39894228040143267794 ; // = sqrt (0.5/ M_PI )
+P[PT(0, 0) ] = temp ;
+if (L > 0) {
+	const double SQRT3 = 1.7320508075688772935 ;
+	P [PT(1, 0) ] = x * SQRT3 * temp ;
+	const double SQRT3DIV2 = -1.2247448713915890491;
+	temp = SQRT3DIV2 * sintheta * temp ;
+	P [PT(1, 1)] = temp ;
+
+	for ( size_t l = 2; l <= L ; l ++) {
+		for ( size_t m = 0; m < l-1; m ++) {
+			P [PT(l,m)] = A[PT(l, m)]*(x*P[PT(l-1, m )]
+			+ B[PT(l, m )]* P[PT(l-2, m)]) ;
+		}
+		P[PT(l, l-1)] = x*sqrt(2*(l-1)+3)*temp ;
+		temp = - sqrt(1.0+0.5/l) * sintheta * temp ;
+		P[PT(l, l)] = temp ;
+	}
+}
+}
+
+
+void computeY_real( const size_t L , const double * const P ,
+double * const Y , const double phi ) {
+for (size_t l = 0; l <= L ; l ++)
+	Y[YR(l, 0)] = P[PT(l, 0)] * 0.5 * M_SQRT2 ;
+
+double c1 = 1.0 , c2 = cos(phi);
+double s1 = 0.0 , s2 = -sin(phi) ;
+double tc = 2.0 * c2 ;
+for (size_t m = 1; m <= L ; m ++) {
+	double s = tc * s1 - s2;
+	double c = tc * c1 - c2;
+	s2 = s1 ; s1 = s ; c2 = c1 ; c1 = c ;
+	for ( size_t l = m ; l <= L ; l ++) {
+		Y[YR(l, - m)] = P[PT(l, m)] * s ;
+		Y[YR(l, m)] = P[PT(l, m)] * c ;
+	}
+}
+}
+
+void sph_harmonics_real(const double theta, const double phi, const int LL,
+				double complex * const Y, double complex * const dY_theta,
+				double complex * const dY_phi ) {
+  	
+	int memsize_A_B_P,  memsize_Y;
+	memsize_A_B_P = ((LL+1)*(LL+2))/2;
+
+	double A[memsize_A_B_P], B[memsize_A_B_P];
+	double *P;
+	double x = cos(theta);
+	
+	memsize_Y = (LL+1)*(LL+1) ;
+
+	P = (double *) malloc(sizeof(double)*memsize_A_B_P);
+	for ( size_t l =2; l <= LL ; l++) {
+		double ls = l *l , lm1s = (l -1) *( l -1) ;
+		for ( size_t m =0; m <l -1; m ++) {
+			double ms = m * m ;
+			A[ PT(l, m) ] = sqrt ((4* ls -1.0) /( ls - ms ) ) ;
+			B[ PT(l, m) ] = - sqrt (( lm1s - ms ) /(4* lm1s -1.0) ) ;
+		}
+	}
+	
+	
+	computeP_real( LL , &A[0] , &B[0] , P , x );
+	computeY_real( LL , P , Y ,  phi );
+	
+	/* Derivatives w.r.t theta and phi remaining */
+
+	free(P);
+
+}
+
+
 /*
 sph_harmonics function calculates the spherical harmonics and its derivatives with respect to theta and phi. 
 
@@ -107,6 +186,8 @@ sph_harmonics function calculates the spherical harmonics and its derivatives wi
 2. dY_theta: pointer to the array containing the derrivative of  Spherical harmonics w.r.t theta for all combinations 0 <= l <= L and -l <=m <= l. 
 3. dY_phi: pointer to the array containing the derrivative of  Spherical harmonics w.r.t phi for all combinations 0 <= l <= L and -l <=m <= l. 
 */
+
+
 
 void sph_harmonics(const double theta, const double phi, const int LL,
 				double complex * const Y, double complex * const dY_theta,
