@@ -8,34 +8,12 @@ https://arxiv.org/abs/1410.1748v1
 #include <stdlib.h>
 #include <complex.h>
 #include <math.h>
-#include <time.h>
+
+#include "tools.h"
+#include "spherical_harmonics.h"
 
 #define PT(l1, m1) ((m1) +((l1) *((l1) +1))/2)
 #define YR(l2 , m2 ) (( m2 ) +( l2 ) +(( l2 ) *( l2) ) )
-
-// timing function that works for both Linux and MAC OS
-void my_gettime(struct timespec *ts) {
-#ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
-  clock_serv_t cclock;
-  mach_timespec_t mts;
-  host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
-  clock_get_time(cclock, &mts);
-  mach_port_deallocate(mach_task_self(), cclock);
-  ts->tv_sec = mts.tv_sec;
-  ts->tv_nsec = mts.tv_nsec;
-#else
-  clock_gettime(CLOCK_MONOTONIC, ts);
-#endif
-}
-
-
-// find time in seconds
-double elapsed_time(struct timespec *t_start, struct timespec *t_end)
-{
-    double time_secs = (t_end->tv_sec - t_start->tv_sec)
-                     + (double) (t_end->tv_nsec - t_start->tv_nsec) * 1e-9;
-    return time_secs;
-}
 
 /*
 computeP function calculates the normalized associated Legendre's polynomial. The normalization is done such that
@@ -120,54 +98,54 @@ void computeY( const size_t L , const double * const P ,
 }
 
 void computeP_real( const size_t L ,
-const double * const A , const double * const B ,
-double * const P , const double x ) {
-const double sintheta = sqrt (1.0 - x*x) ;
-double temp = 0.39894228040143267794 ; // = sqrt (0.5/ M_PI )
-P[PT(0, 0) ] = temp ;
-if (L > 0) {
-	const double SQRT3 = 1.7320508075688772935 ;
-	P [PT(1, 0) ] = x * SQRT3 * temp ;
-	const double SQRT3DIV2 = -1.2247448713915890491;
-	temp = SQRT3DIV2 * sintheta * temp ;
-	P [PT(1, 1)] = temp ;
+	const double * const A , const double * const B ,
+	double * const P , const double x )
+{
+	const double sintheta = sqrt (1.0 - x*x) ;
+	double temp = 0.39894228040143267794 ; // = sqrt (0.5/ M_PI )
+	P[PT(0, 0) ] = temp ;
+	if (L > 0) {
+		const double SQRT3 = 1.7320508075688772935 ;
+		P [PT(1, 0) ] = x * SQRT3 * temp ;
+		const double SQRT3DIV2 = -1.2247448713915890491;
+		temp = SQRT3DIV2 * sintheta * temp ;
+		P [PT(1, 1)] = temp ;
 
-	for ( size_t l = 2; l <= L ; l ++) {
-		for ( size_t m = 0; m < l-1; m ++) {
-			P [PT(l,m)] = A[PT(l, m)]*(x*P[PT(l-1, m )]
-			+ B[PT(l, m )]* P[PT(l-2, m)]) ;
+		for ( size_t l = 2; l <= L ; l ++) {
+			for ( size_t m = 0; m < l-1; m ++) {
+				P [PT(l,m)] = A[PT(l, m)]*(x*P[PT(l-1, m )]
+				+ B[PT(l, m )]* P[PT(l-2, m)]) ;
+			}
+			P[PT(l, l-1)] = x*sqrt(2*(l-1)+3)*temp ;
+			temp = - sqrt(1.0+0.5/l) * sintheta * temp ;
+			P[PT(l, l)] = temp ;
 		}
-		P[PT(l, l-1)] = x*sqrt(2*(l-1)+3)*temp ;
-		temp = - sqrt(1.0+0.5/l) * sintheta * temp ;
-		P[PT(l, l)] = temp ;
 	}
-}
 }
 
 
 void computeY_real( const size_t L , const double * const P ,
-double * const Y , const double phi ) {
-for (size_t l = 0; l <= L ; l ++)
-	Y[YR(l, 0)] = P[PT(l, 0)] * 0.5 * M_SQRT2 ;
+	double * const Y , const double phi ) {
+	for (size_t l = 0; l <= L ; l ++)
+		Y[YR(l, 0)] = P[PT(l, 0)] * 0.5 * M_SQRT2 ;
 
-double c1 = 1.0 , c2 = cos(phi);
-double s1 = 0.0 , s2 = -sin(phi) ;
-double tc = 2.0 * c2 ;
-for (size_t m = 1; m <= L ; m ++) {
-	double s = tc * s1 - s2;
-	double c = tc * c1 - c2;
-	s2 = s1 ; s1 = s ; c2 = c1 ; c1 = c ;
-	for ( size_t l = m ; l <= L ; l ++) {
-		Y[YR(l, - m)] = P[PT(l, m)] * s ;
-		Y[YR(l, m)] = P[PT(l, m)] * c ;
+	double c1 = 1.0 , c2 = cos(phi);
+	double s1 = 0.0 , s2 = -sin(phi) ;
+	double tc = 2.0 * c2 ;
+	for (size_t m = 1; m <= L ; m ++) {
+		double s = tc * s1 - s2;
+		double c = tc * c1 - c2;
+		s2 = s1 ; s1 = s ; c2 = c1 ; c1 = c ;
+		for ( size_t l = m ; l <= L ; l ++) {
+			Y[YR(l, - m)] = P[PT(l, m)] * s ;
+			Y[YR(l, m)] = P[PT(l, m)] * c ;
+		}
 	}
-}
 }
 
 void sph_harmonics_real(const double theta, const double phi, const int LL,
-				double complex * const Y, double complex * const dY_theta,
-				double complex * const dY_phi ) {
-  	
+				double * const Y, double * const dY_theta,
+				double * const dY_phi ) {
 	int memsize_A_B_P,  memsize_Y;
 	memsize_A_B_P = ((LL+1)*(LL+2))/2;
 
@@ -277,55 +255,4 @@ void sph_harmonics(const double theta, const double phi, const int LL,
 
 }
 
-int main(){
-	double theta, phi;
-	double complex *Y, *dY_th, *dY_phi;
-	int Lmax, memsize_Y;
-    struct timespec t_start, t_end, t1, t2;
-    double time_secs;
-
-    my_gettime(&t1);
- 
-	Lmax=2;
-	theta=1.2;
-	phi = 2.1;
-	memsize_Y = (Lmax+1)*(Lmax+1);
-	
-    my_gettime(&t_start);
-    Y = (double complex *) malloc(sizeof(double complex)*memsize_Y);
-	dY_phi = (double complex *) malloc(sizeof(double complex)*memsize_Y);
-	dY_th = (double complex *) malloc(sizeof(double complex)*memsize_Y);
-    my_gettime(&t_end);
-    time_secs = elapsed_time(&t_start, &t_end);
-    printf("Run-time of the memory allocation: %.3lf ms\n", time_secs*1000.0);
- 
-    my_gettime(&t_start);
-    sph_harmonics(theta, phi, Lmax, Y, dY_th, dY_phi);
-    my_gettime(&t_end);
-    // time in seconds
-    time_secs = elapsed_time(&t_start, &t_end);
-    // double time_secs = (t_end.tv_sec - t_start.tv_sec)
-    //                 + (double) (t_end.tv_nsec - t_start.tv_nsec) * 1e-9;
-    printf("Run-time of the sph_harmonics: %.3lf ms\n", time_secs*1000.0);
-    // fprintf(stderr, "Run-time of the sph_harmonics: %8.0lf ms\n", time_secs*1000.0);
- 
-	// for (int l=0; l <= Lmax; l++){
-	// 	for (int m=-l; m<=l; m++){
-	// 		printf("Y(%d,%d,%f,%f): %f + %f i,\n dY_theta(%d,%d,%f,%f): %f + %f i,\n dY_phi(%d,%d,%f,%f): %f + %f i\n",
-	// 			  l,m,theta,phi, creal(Y[YR(l,m)]), cimag(Y[YR(l,m)]),  l,m,theta,phi, creal(dY_th[YR(l,m)]), cimag(dY_th[YR(l,m)]),
-	// 			  l,m,theta,phi, creal(dY_phi[YR(l,m)]), cimag(dY_phi[YR(l,m)]));
-	// 			  printf("\n");
-	// 	}
-	// }
- 
-	free(Y);
-	free(dY_phi);
-	free(dY_th);
-
-    my_gettime(&t2);
-    time_secs = elapsed_time(&t1, &t2);
-    printf("Run-time of total program: %.3lf ms\n", time_secs*1000.0);
-
-	return 0;
-}
 

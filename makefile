@@ -19,7 +19,7 @@ CFLAGS = -std=gnu99 -O3 -Wall -g
 
 LDLIBS = -lm
 
-OBJSC = spherical_harmonics.o
+OBJSC = spherical_harmonics.o tools.o test.o
 
 override CC=gcc
 #override CC=mpicc
