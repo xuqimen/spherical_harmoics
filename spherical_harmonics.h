@@ -51,8 +51,7 @@ void computeY_real( const size_t L , const double * const P ,
 	double * const Y , const double phi );
 
 void sph_harmonics_real(const double theta, const double phi, const int LL,
-				double * const Y, double * const dY_theta,
-				double * const dY_phi );
+				double * const Y);
 
 /*
 sph_harmonics function calculates the spherical harmonics and its derivatives with respect to theta and phi. 
@@ -68,5 +67,7 @@ sph_harmonics function calculates the spherical harmonics and its derivatives wi
 void sph_harmonics(const double theta, const double phi, const int LL,
 				double complex * const Y, double complex * const dY_theta,
 				double complex * const dY_phi );
+
+void RealSphericalHarmonic(const int len, double *x, double *y,double *z, double *r, const int l, const int m, double *Ylm);				
 
 #endif

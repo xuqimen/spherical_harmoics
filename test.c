@@ -19,53 +19,58 @@
 #include "spherical_harmonics.h"
 
 int main() {
-	double theta, phi;
-	double complex *Y, *dY_th, *dY_phi;
+	double theta, phi, x=1.0, y=2.0, z=3.0,r;
+	double *Y;
 	int Lmax, memsize_Y;
-    struct timespec t_start, t_end, t1, t2;
-    double time_secs;
+    	struct timespec t_start, t_end, t1, t2;
+    	double time_secs;
+    	r = sqrt(x*x+y*y+z*z);
 
-    my_gettime(&t1);
+    	my_gettime(&t1);
  
-	Lmax=2;
-	theta=1.2;
-	phi = 2.1;
+	Lmax=3;
+	theta=atan(sqrt(x*x+y*y)/z);
+	phi = atan(y/x);
 	memsize_Y = (Lmax+1)*(Lmax+1);
 	
-    my_gettime(&t_start);
-    Y = (double complex *) malloc(sizeof(double complex)*memsize_Y);
-	dY_phi = (double complex *) malloc(sizeof(double complex)*memsize_Y);
-	dY_th = (double complex *) malloc(sizeof(double complex)*memsize_Y);
-    my_gettime(&t_end);
-    time_secs = elapsed_time(&t_start, &t_end);
-    printf("Run-time of the memory allocation: %.3lf ms\n", time_secs*1000.0);
+    	my_gettime(&t_start);
+    	Y = (double *) malloc(sizeof(double)*memsize_Y);
+	//dY_phi = (double *) malloc(sizeof(double)*memsize_Y);
+	//dY_th = (double *) malloc(sizeof(double)*memsize_Y);
+	my_gettime(&t_end);
+	time_secs = elapsed_time(&t_start, &t_end);
+	printf("Run-time of the memory allocation: %.3lf ms\n", time_secs*1000.0);
  
-    my_gettime(&t_start);
-    sph_harmonics(theta, phi, Lmax, Y, dY_th, dY_phi);
-    my_gettime(&t_end);
-    // time in seconds
-    time_secs = elapsed_time(&t_start, &t_end);
-    // double time_secs = (t_end.tv_sec - t_start.tv_sec)
-    //                 + (double) (t_end.tv_nsec - t_start.tv_nsec) * 1e-9;
-    printf("Run-time of the sph_harmonics: %.3lf ms\n", time_secs*1000.0);
-    // fprintf(stderr, "Run-time of the sph_harmonics: %8.0lf ms\n", time_secs*1000.0);
- 
-	// for (int l=0; l <= Lmax; l++){
-	// 	for (int m=-l; m<=l; m++){
-	// 		printf("Y(%d,%d,%f,%f): %f + %f i,\n dY_theta(%d,%d,%f,%f): %f + %f i,\n dY_phi(%d,%d,%f,%f): %f + %f i\n",
-	// 			  l,m,theta,phi, creal(Y[YR(l,m)]), cimag(Y[YR(l,m)]),  l,m,theta,phi, creal(dY_th[YR(l,m)]), cimag(dY_th[YR(l,m)]),
-	// 			  l,m,theta,phi, creal(dY_phi[YR(l,m)]), cimag(dY_phi[YR(l,m)]));
-	// 			  printf("\n");
-	// 	}
-	// }
+	my_gettime(&t_start);
+	sph_harmonics_real(theta, phi, Lmax, Y);
+	my_gettime(&t_end);
+	// time in seconds
+	time_secs = elapsed_time(&t_start, &t_end);
+	printf("Run-time of the sph_harmonics: %.3lf ms\n", time_secs*1000.0);
+
  
 	free(Y);
-	free(dY_phi);
-	free(dY_th);
+	//free(dY_phi);
+	//free(dY_th);
 
-    my_gettime(&t2);
-    time_secs = elapsed_time(&t1, &t2);
-    printf("Run-time of total program: %.3lf ms\n", time_secs*1000.0);
+    	my_gettime(&t2);
+    	time_secs = elapsed_time(&t1, &t2);
+    	printf("Run-time of total program: %.3lf ms\n", time_secs*1000.0);
+    	
+    	double Ylm[1];
+    	
+    	my_gettime(&t1);
+    	for (int i=0; i < Lmax; i++){
+    		for (int j=-i; j<=i; j++){
+    			RealSphericalHarmonic(1, &x, &y, &z, &r, i, j, Ylm);
+    		}
+    	}
+    	my_gettime(&t2);
+    	time_secs = elapsed_time(&t1, &t2);
+    	printf("Run-time of total program SPARC: %.3lf ms\n", time_secs*1000.0);
+    	
+    	RealSphericalHarmonic(1, &x, &y, &z, &r, Lmax, Lmax, Ylm);
+    	printf("SPARC: %f New: %f\n",Ylm[0], Y[memsize_Y-1]);
 
 	return 0;
 }
