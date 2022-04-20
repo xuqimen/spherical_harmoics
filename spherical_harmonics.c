@@ -33,22 +33,22 @@ void computeP( const size_t L ,
 
 	const double sintheta = sqrt (1.0 - x * x ) ;
 	double temp = 0.282094791773878 ; // = sqrt (1/ 4 M_PI )
-	P[ PT(0,0) ] = temp ;
+	P[PT(0,0)] = temp ;
 	if ( L > 0) {
 		const double SQRT3 = 1.732050807568877;
-		P[ PT(1,0) ] = x * SQRT3 * temp ;
+		P[PT(1,0)] = x * SQRT3 * temp ;
 		const double SQRT3DIV2 = -1.2247448713915890491;
 		temp = SQRT3DIV2 * sintheta * temp ;
-		P[ PT(1,1) ] = temp ;
+		P[PT(1,1)] = temp ;
 
 		for ( size_t l =2; l <= L ; l ++) {
 			for ( size_t m =0; m <l -1; m ++) {
-				P[ PT(l,m) ] = A[ PT(l,m) ]*( x * P[ PT(l-1,m) ]
-				+ B[ PT(l,m) ]* P[ PT(l-2,m) ]) ;
+				P[PT(l,m)] = A[PT(l,m)]*( x * P[PT(l-1,m)]
+				+ B[PT(l,m)]* P[PT(l-2,m)]) ;
 			}
-			P[ PT(l,l-1) ] = x * sqrt (2*( l-1) +3) * temp ;
+			P[PT(l,l-1)] = x * sqrt(2*( l-1) +3) * temp ;
 			temp = - sqrt(1.0+0.5/l) * sintheta * temp ;
-			P[ PT(l,l) ] = temp ;
+			P[PT(l,l)] = temp ;
 		}
 	}
 }
@@ -74,8 +74,8 @@ void computeY( const size_t L , const double * const P ,
 	}
 	
 	double complex temp1, temp2;
-	double c1 = 1.0 , c2 = cos ( phi ) ;
-	double s1 = 0.0 , s2 = - sin ( phi ) ;
+	double c1 = 1.0 , c2 = cos(phi) ;
+	double s1 = 0.0 , s2 = - sin(phi) ;
 	double tc = 2.0 * c2 ;
 	for ( size_t m =1; m <= L ; m ++) {
 		double s = tc * s1 - s2 ;
@@ -83,15 +83,15 @@ void computeY( const size_t L , const double * const P ,
 		s2 = s1 ; s1 = s ; c2 = c1 ; c1 = c ;
 		for ( size_t l = m ; l <= L ; l ++) {
 			
-			temp1 = P[ PT(l,m) ] * c + P[ PT(l,m) ] * s * I ;
+			temp1 = P[PT(l,m)] * c + P[ PT(l,m) ] * s * I ;
 			if (m%2 == 0){
-				temp2 =  P[ PT(l,m) ] * c - P[ PT(l,m) ] * s * I ;
+				temp2 =  P[PT(l,m)] * c - P[PT(l,m)] * s * I ;
 			} else {
-				temp2 =  -P[ PT(l,m) ] * c + P[ PT(l,m) ] * s * I ;
+				temp2 =  -P[PT(l,m)] * c + P[PT(l,m)] * s * I ;
 			}
 			
-			Y[ YR(l, m) ] = temp1 ;
-			Y[ YR(l, -m) ] = temp2 ;
+			Y[YR(l, m)] = temp1 ;
+			Y[YR(l, -m)] = temp2 ;
 
 		}
 	}
@@ -102,18 +102,18 @@ void computeP_real( const size_t L ,
 	double * const P , const double x )
 {
 	const double sintheta = sqrt (1.0 - x*x) ;
-	double temp = 0.39894228040143267794 ; // = sqrt (0.5/ M_PI )
+	double temp = 0.282094791773878 ; // = sqrt (1/ 4 M_PI )
 	P[PT(0, 0) ] = temp ;
 	if (L > 0) {
 		const double SQRT3 = 1.7320508075688772935 ;
-		P [PT(1, 0) ] = x * SQRT3 * temp ;
+		P[PT(1, 0) ] = x * SQRT3 * temp ;
 		const double SQRT3DIV2 = -1.2247448713915890491;
 		temp = SQRT3DIV2 * sintheta * temp ;
-		P [PT(1, 1)] = temp ;
+		P[PT(1, 1)] = temp ;
 
 		for ( size_t l = 2; l <= L ; l ++) {
 			for ( size_t m = 0; m < l-1; m ++) {
-				P [PT(l,m)] = A[PT(l, m)]*(x*P[PT(l-1, m )]
+				P[PT(l,m)] = A[PT(l, m)]*(x*P[PT(l-1, m )]
 				+ B[PT(l, m )]* P[PT(l-2, m)]) ;
 			}
 			P[PT(l, l-1)] = x*sqrt(2*(l-1)+3)*temp ;
@@ -127,8 +127,10 @@ void computeP_real( const size_t L ,
 void computeY_real( const size_t L , const double * const P ,
 	double * const Y , const double phi ) {
 	for (size_t l = 0; l <= L ; l ++)
-		Y[YR(l, 0)] = P[PT(l, 0)] * 0.5 * M_SQRT2 ;
-
+		Y[YR(l, 0)] = P[PT(l, 0)] ;
+	
+	const double SQRT2 = 1.414213562373095 ;
+	
 	double c1 = 1.0 , c2 = cos(phi);
 	double s1 = 0.0 , s2 = -sin(phi) ;
 	double tc = 2.0 * c2 ;
@@ -137,8 +139,8 @@ void computeY_real( const size_t L , const double * const P ,
 		double c = tc * c1 - c2;
 		s2 = s1 ; s1 = s ; c2 = c1 ; c1 = c ;
 		for ( size_t l = m ; l <= L ; l ++) {
-			Y[YR(l, - m)] = P[PT(l, m)] * s ;
-			Y[YR(l, m)] = P[PT(l, m)] * c ;
+			Y[YR(l, - m)] = P[PT(l, m)] * s*SQRT2 ;
+			Y[YR(l, m)] = P[PT(l, m)] * c*SQRT2;
 		}
 	}
 }
@@ -160,8 +162,8 @@ void sph_harmonics_real(const double theta, const double phi, const int LL,
 		double ls = l *l , lm1s = (l -1) *( l -1) ;
 		for ( size_t m =0; m <l -1; m ++) {
 			double ms = m * m ;
-			A[ PT(l, m) ] = sqrt ((4* ls -1.0) /( ls - ms ) ) ;
-			B[ PT(l, m) ] = - sqrt (( lm1s - ms ) /(4* lm1s -1.0) ) ;
+			A[PT(l, m)] = sqrt((4* ls -1.0) /( ls - ms ) ) ;
+			B[PT(l, m)] = - sqrt(( lm1s - ms ) /(4* lm1s -1.0) ) ;
 		}
 	}
 	
@@ -209,8 +211,8 @@ void sph_harmonics(const double theta, const double phi, const int LL,
 		double ls = l *l , lm1s = (l -1) *( l -1) ;
 		for ( size_t m =0; m <l -1; m ++) {
 			double ms = m * m ;
-			A[ PT(l, m) ] = sqrt ((4* ls -1.0) /( ls - ms ) ) ;
-			B[ PT(l, m) ] = - sqrt (( lm1s - ms ) /(4* lm1s -1.0) ) ;
+			A[PT(l, m)] = sqrt((4* ls -1.0) /( ls - ms ) ) ;
+			B[PT(l, m)] = - sqrt(( lm1s - ms ) /(4* lm1s -1.0) ) ;
 		}
 
 	}
