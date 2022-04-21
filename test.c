@@ -127,11 +127,6 @@ void test_results_real(int Lmax, int n)
 	SetRandMat(z, n, 1, rand_min, rand_max);
 
 	// convert to spherical coordiantes, i.e., find radius, theta, phi
-	// for (int i = 0; i < n; i++) {
-	// 	r[i] = sqrt(x[i]*x[i]+y[i]*y[i]+z[i]*z[i]);
-	// 	theta[i] = atan(sqrt(x[i]*x[i]+y[i]*y[i])/z[i]);
-	// 	phi[i] = atan(y[i]/x[i]);
-	// }
 	cart2polar(n, x, y, z, r, theta, phi);
 
 	int memsize_Y = (Lmax+1)*(Lmax+1);
@@ -219,12 +214,6 @@ void test_results_real_vector(int Lmax, int n)
 	SetRandMat(y, n, 1, rand_min, rand_max);
 	SetRandMat(z, n, 1, rand_min, rand_max);
 
-	// convert to spherical coordiantes, i.e., find radius, theta, phi
-	// for (int i = 0; i < n; i++) {
-	// 	r[i] = sqrt(x[i]*x[i]+y[i]*y[i]+z[i]*z[i]);
-	// 	theta[i] = atan(sqrt(x[i]*x[i]+y[i]*y[i])/z[i]);
-	// 	phi[i] = atan(y[i]/x[i]);
-	// }
 	cart2polar(n, x, y, z, r, theta, phi);
 
 	int memsize_Y = (Lmax+1)*(Lmax+1);
@@ -286,6 +275,93 @@ void test_results_real_vector(int Lmax, int n)
 	printf("Total run-time of the test: %.3lf ms\n", time_secs*1000.0);
 }
 
+void test_results_real_vector_v2(int Lmax, int n)
+{
+#define Y(i,j) Y[(i)+(j)*n]
+	struct timespec t_start, t_end, t1, t2;
+	double time_secs;
+	my_gettime(&t_start);
+
+	// set up test input data
+	// int n = 1000;
+	double *x = (double *) malloc(n * sizeof(*x));
+	double *y = (double *) malloc(n * sizeof(*y));
+	double *z = (double *) malloc(n * sizeof(*z));
+	double *r = (double *) malloc(n * sizeof(*r));
+	double *theta = (double *) malloc (n * sizeof(*theta));
+	double *phi = (double *) malloc (n * sizeof(*phi));
+	assert(x != NULL && y != NULL && z != NULL);
+	assert(r != NULL && theta != NULL && phi != NULL);
+
+	double rand_min = -1.0, rand_max = 1.0;
+	srand(1); // set up seed for random number generator
+	// generate n random coordinates (x,y,z)
+	SetRandMat(x, n, 1, rand_min, rand_max);
+	SetRandMat(y, n, 1, rand_min, rand_max);
+	SetRandMat(z, n, 1, rand_min, rand_max);
+
+	cart2polar(n, x, y, z, r, theta, phi);
+
+	int memsize_Y = (Lmax+1)*(Lmax+1);
+	double *Y = (double *) malloc(memsize_Y * n * sizeof(*Y));
+	assert(Y != NULL);
+	double *Ylm = (double *) malloc(n * sizeof(*Y));
+	assert(Ylm != NULL);
+
+	// use new general routine to find Y_lm for all l <= Lmax
+	my_gettime(&t1); // start timer
+	sph_harmonics_real_vector_v2(n, theta, phi, Lmax, Y);
+	my_gettime(&t2); // stop timer
+	double t_sph_harmonics = elapsed_time(&t1, &t2);
+
+	// use explicit formula to find Ylm for all l <= Lmax
+	double t_sparc = 0.0;
+	double error = 0.0;
+	double tol = 1e-12;
+	for (int l = 0; l <= Lmax; l++) {
+		for (int m = -l; m <= l; m++) {
+			my_gettime(&t1); // start timer
+			// use SPARC routine to find spherical harmonics for l,m
+			RealSphericalHarmonic(n, x, y, z, r, l, m, Ylm);
+			my_gettime(&t2); // stop timer
+			t_sparc += elapsed_time(&t1, &t2);
+			
+			// compare results with general routine
+			double error_lm = 0.0;
+			// error_lm = check_double_arrays(Ylm, 1, &Y[YR(l, m)], memsize_Y, n, tol);
+			error_lm = check_double_arrays(Ylm, 1, &Y(0,YR(l, m)), 1, n, tol);
+			error = max(error, error_lm);
+			printf(BLU "l = %2d, m = %2d, error_lm = %.3e\n" RESET, l, m, error_lm);
+			if (error_lm > tol) {
+				for (int i = 0; i < n; i++) {
+					printf("(x,y,z) = (%.3f,%.3f,%.3f), l = %2d, m = %2d, Ylm = %.3f, Y[l,m] = %.3f, error_lm = %.3e\n",
+							x[i],y[i],z[i],l,m,Ylm[i],Y(i,YR(l, m)),error_lm);
+				}
+			}
+		}
+	}
+	if (error > tol) {
+		printf(RED "One or more test failed!\n" RESET);
+	} else {
+		printf(GRN "Success! All tests passed!\n" RESET);
+	}
+
+	free(x); free(y); free(z);
+	free(r); free(theta); free(phi);
+	free(Y); free(Ylm);
+
+	my_gettime(&t_end);
+	// time in seconds
+	time_secs = elapsed_time(&t_start, &t_end);
+	
+	printf("===============\n");
+	printf("= Timing info =\n");
+	printf("===============\n");
+	printf("Run-time of sph_harmonics: %.3lf ms\n", t_sph_harmonics*1000.0);
+	printf("Run-time of SPARC routine: %.3lf ms\n", t_sparc*1000.0);
+	printf("Total run-time of the test: %.3lf ms\n", time_secs*1000.0);
+#undef Y
+}
 
 
 int main(int argc, char *argv[]) {
@@ -296,7 +372,8 @@ int main(int argc, char *argv[]) {
 		Lmax = atoi(argv[1]);
 		n = atoi(argv[2]);
 	}
-	test_results_real_vector(Lmax, n);
+	// test_results_real(Lmax, n);
+	test_results_real_vector_v2(Lmax, n);
 
 	return 0;
 }

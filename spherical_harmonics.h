@@ -81,4 +81,7 @@ void computeY_real_vector( const size_t L , const double * const P ,
 void sph_harmonics_real_vector(const int len, double *theta, double *phi, const int LL,
                 double * const Y);
 
+void sph_harmonics_real_vector_v2(const int len, double *theta, double *phi, const int LL,
+                double * const Y);
+
 #endif
