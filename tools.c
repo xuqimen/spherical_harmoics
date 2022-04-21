@@ -131,10 +131,12 @@ void cart2polar(const int n, const double *x, const double *y, const double *z,
 		r[i] = sqrt(x[i] * x[i] + y[i] * y[i] + z[i] * z[i]);
 		theta[i] = atan(sqrt(x[i]*x[i] + y[i]*y[i])/z[i]);
 		if (theta[i]<0.0) theta[i] += M_PI;
+		if (z[i]==0) theta[i] = M_PI/2.0;
 		phi[i] = atan(y[i]/x[i]);
 		if (x[i] < 0.0) phi[i] += M_PI;  // 2nd Quandrant
 		if (x[i] > 0.0 && y[i] < 0.0) phi[i] += 2*M_PI;  // 4th Quadrant
 		if (x[i] == 0.0 && y[i] < 0.0) phi[i] = 3*M_PI/2;
+		if (x[i]==0.0 && y[i] >0.0) phi[i] = M_PI/2.0;
 		// if (x[i]>0.0 && y[i]>0.0) phi[i] = phi[i];  // 1st Quandrant
 		// if (x[i]<0.0 && y[i]>0.0) phi[i] = M_PI+phi[i];  // 2nd Quandrant
 		// if (x[i]<0.0 && y[i]<0.0) phi[i] = M_PI+phi[i];  // 3rd Quadrant
