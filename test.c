@@ -152,7 +152,7 @@ void test_results_real(int Lmax, int n)
 	double t_sparc = 0.0;
 	double error = 0.0;
 	double tol = 1e-12;
-	for (int l = 0; l < Lmax; l++) {
+	for (int l = 0; l <= Lmax; l++) {
 		for (int m = -l; m <= l; m++) {
 			my_gettime(&t1); // start timer
 			// use SPARC routine to find spherical harmonics for l,m
