@@ -124,6 +124,8 @@ void computeP_real( const size_t L ,
 }
 
 
+
+
 void computeY_real( const size_t L , const double * const P ,
 	double * const Y , const double phi ) {
 	for (size_t l = 0; l <= L ; l ++)
@@ -149,6 +151,138 @@ void computeY_real( const size_t L , const double * const P ,
 			
 		}
 	}
+}
+
+void computeP_real_vector( const size_t L ,
+    const double * const A , const double * const B ,
+    double * const P , double *x, const int len)
+{
+    double sintheta[len];
+    double temp[len];
+      // = sqrt (1/ 4 M_PI )
+    int tot_len = PT(L,L)+1;
+    int PT_00 = PT(0, 0);
+    int PT_10 = PT(1, 0);
+    int PT_11 = PT(1, 1);
+    for (int i = 0; i < len; i++){
+        temp[i] = 0.282094791773878 ; 
+        P[i*tot_len + PT_00 ] = 0.282094791773878 ; 
+        sintheta[i] = sqrt (1.0 - x[i]*x[i]) ;
+    }
+    if (L > 0) {
+        const double SQRT3 = 1.7320508075688772935 ;
+        const double SQRT3DIV2 = -1.2247448713915890491;
+        for (int i = 0; i < len; i++){
+            P[i*tot_len + PT_10 ] = x[i] * SQRT3 * temp[i] ;
+            temp[i] = SQRT3DIV2 * sintheta[i] * temp[i] ;
+            P[i*tot_len + PT_11] = temp[i] ;
+        }
+
+        for ( size_t l = 2; l <= L ; l ++) {
+            int PT_ll = PT(l, l);
+            int PT_ll1 = PT(l, l-1);
+            double temp_l = sqrt(2*(l-1)+3);
+            double temp_l2 = sqrt(1.0+0.5/l);
+            for ( size_t m = 0; m < l-1; m ++) {
+                int PT_lm = PT(l, m);
+                int PT_lm1 = PT(l-1, m);
+                int PT_lm2 = PT(l-2, m);
+                for (int i = 0; i < len; i++){
+                    P[i*tot_len + PT_lm] = A[PT_lm]*(x[i]*P[i*tot_len + PT_lm1]
+                    + B[PT_lm]* P[i*tot_len + PT_lm2]) ;
+                }
+            }
+            for (int i = 0; i < len; i++){
+                P[i*tot_len +PT_ll1] = x[i]*temp_l*temp[i];
+                temp[i] = - temp_l2 * sintheta[i] * temp[i] ;
+                P[i*tot_len +PT_ll] = temp[i] ;
+            }
+        }
+    }
+}
+
+void computeY_real_vector( const size_t L , const double * const P ,
+    double * const Y , double *phi, const int len ) {
+    
+    int total_lengthY = 1+YR(L,L);
+    int total_lengthP = 1+PT(L,L);
+    for (size_t l = 0; l <= L ; l ++){
+        int YR_l0 = YR(l, 0);
+        int PT_l0 = PT(l, 0);
+        for (int i=0; i<len; i++){
+            Y[i*total_lengthY+YR_l0] = P[i*total_lengthP+PT_l0] ;
+        }
+    }
+    
+    const double SQRT2 = 1.414213562373095 ;
+    
+    double c1[len], c2[len], c[len];
+    double s1[len], s2[len], s[len], tc[len];
+    
+    for (int i=0; i<len; i++){
+        c1[i] = 1.0;
+        s1[i] = 0.0;
+        c2[i] = cos(phi[i]);
+        s2[i] = -sin(phi[i]);
+        tc[i] = 2.0*c2[i];
+    }
+    
+    
+    for (size_t m = 1; m <= L ; m ++) {
+        for (int i=0; i<len; i++){
+            s[i] = tc[i] * s1[i] - s2[i];
+            c[i] = tc[i] * c1[i] - c2[i];
+            s2[i] = s1[i]; s1[i] = s[i]; c2[i] = c1[i]; c1[i] = c[i];
+        }
+        for ( size_t l = m ; l <= L ; l ++) {
+            int PT_lm = PT(l, m);
+            int YR_lm = YR(l, m);
+            int YR_lm2 = YR(l, -m);
+            for (int i=0; i<len; i++){
+                if (m%2==0){
+                    Y[i*total_lengthY+YR_lm2] = P[i*total_lengthP+PT_lm] * s[i]*SQRT2 ;
+                    Y[i*total_lengthY+YR_lm] = P[i*total_lengthP+PT_lm] * c[i]*SQRT2;
+                } else {
+                    Y[i*total_lengthY+YR_lm2] = -P[i*total_lengthP+PT_lm] * s[i]*SQRT2 ;
+                    Y[i*total_lengthY+YR_lm] = -P[i*total_lengthP+PT_lm] * c[i]*SQRT2;
+                }
+            }
+        }
+    }
+}
+
+void sph_harmonics_real_vector(const int len, double *theta, double *phi, const int LL,
+                double * const Y) {
+    int memsize_A_B_P;
+    memsize_A_B_P = ((LL+1)*(LL+2))/2;
+
+    double A[memsize_A_B_P], B[memsize_A_B_P];
+    double *P;
+    double x[len];
+    
+    for (int i=0; i <len; i++)
+        x[i] = cos(theta[i]);
+    
+    // memsize_Y = (LL+1)*(LL+1) ;
+
+    P = (double *) malloc(sizeof(double)*memsize_A_B_P*len);
+    for ( size_t l =2; l <= LL ; l++) {
+        double ls = l *l , lm1s = (l -1) *( l -1) ;
+        for ( size_t m =0; m <l -1; m ++) {
+            double ms = m * m ;
+            A[PT(l, m)] = sqrt((4* ls -1.0) /( ls - ms ) ) ;
+            B[PT(l, m)] = - sqrt(( lm1s - ms ) /(4* lm1s -1.0) ) ;
+        }
+    }
+    
+    
+    computeP_real_vector( LL , &A[0] , &B[0] , P , x, len);
+    computeY_real_vector( LL , P , Y ,  phi, len );
+    
+    /* Derivatives w.r.t theta and phi remaining */
+
+    free(P);
+
 }
 
 void sph_harmonics_real(const double theta, const double phi, const int LL,

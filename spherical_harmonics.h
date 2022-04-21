@@ -70,4 +70,15 @@ void sph_harmonics(const double theta, const double phi, const int LL,
 
 void RealSphericalHarmonic(const int len, double *x, double *y,double *z, double *r, const int l, const int m, double *Ylm);				
 
+
+void computeP_real_vector( const size_t L ,
+    const double * const A , const double * const B ,
+    double * const P , double *x, const int len);
+
+void computeY_real_vector( const size_t L , const double * const P ,
+    double * const Y , double *phi, const int len );
+
+void sph_harmonics_real_vector(const int len, double *theta, double *phi, const int LL,
+                double * const Y);
+
 #endif
